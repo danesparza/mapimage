@@ -31,7 +31,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 
 	//	Return our response
 	return events.APIGatewayProxyResponse{
-		Body:       fmt.Sprintf("Hello, %v", "user"),
+		Body:       fmt.Sprintf("Hello!  Path parameters: %+v", request.QueryStringParameters),
 		StatusCode: 200,
 		Headers: map[string]string{
 			"x-service-version": serviceVersion,
