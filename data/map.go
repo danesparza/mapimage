@@ -14,9 +14,18 @@ import (
 
 // GetMapImageForCoordinates gets a map image for the given lat, long and zoom level
 // returns the map image as a base64 encoded jpeg
-func GetMapImageForCoordinates(lat, long float64, zoom int) (string, error) {
+func GetMapImageForCoordinates(lat, long float64, zoom int) (MapImageResponse, error) {
 
-	retval := ""
+	//	Set a default zoom
+	if zoom == 0 {
+		zoom = 3
+	}
+
+	retval := MapImageResponse{
+		Lat:  lat,
+		Long: long,
+		Zoom: zoom,
+	}
 
 	//	Get the map image
 	ctx := sm.NewContext()
@@ -47,7 +56,7 @@ func GetMapImageForCoordinates(lat, long float64, zoom int) (string, error) {
 	jpeg.Encode(buffer, img, nil)
 
 	//	Encode the jpeg to base64
-	retval = base64.StdEncoding.EncodeToString(buffer.Bytes())
+	retval.Image = fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(buffer.Bytes()))
 
 	//	Return what we have
 	return retval, nil

@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strconv"
+	"log"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/danesparza/mapimage/data"
@@ -21,52 +19,33 @@ var (
 	CommitID string
 )
 
+// Message is a custom struct event type to handle the Lambda input
+type Message struct {
+	Lat  float64 `json:"lat"`
+	Long float64 `json:"long"`
+	Zoom int     `json:"zoom"`
+}
+
 // HandleRequest handles the AWS lambda request
-func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func HandleRequest(ctx context.Context, msg Message) (data.MapImageResponse, error) {
 	xray.Configure(xray.Config{LogLevel: "trace"})
 	_, seg := xray.BeginSegment(ctx, "mapimage-lambda-handler")
 
-	//	Set the service version information:
-	serviceVersion := fmt.Sprintf("%s.%s", BuildVersion, CommitID)
-
-	//	Get the lat
-	lat, err := strconv.ParseFloat(request.QueryStringParameters["lat"], 64)
-	if lat == 0 || err != nil {
-		return events.APIGatewayProxyResponse{StatusCode: http.StatusBadRequest}, fmt.Errorf("lat is a required parameter")
-	}
-
-	//	Get the long
-	long, err := strconv.ParseFloat(request.QueryStringParameters["long"], 64)
-	if long == 0 || err != nil {
-		return events.APIGatewayProxyResponse{StatusCode: http.StatusBadRequest}, fmt.Errorf("long is a required parameter")
-	}
-
-	//	Get the zoom level
-	zoom, err := strconv.Atoi(request.QueryStringParameters["zoom"])
-	if zoom == 0 || err != nil {
-		//	Set a default zoom of 3
-		zoom = 3
-	}
-
 	//	Call the method
-	imageData, err := data.GetMapImageForCoordinates(lat, long, zoom)
+	response, err := data.GetMapImageForCoordinates(msg.Lat, msg.Long, msg.Zoom)
 	if err != nil {
-		return events.APIGatewayProxyResponse{}, err
+		seg.Close(err)
+		log.Fatalf("problem getting map image: %v", err)
 	}
+
+	//	Set the service version information:
+	response.Version = fmt.Sprintf("%s.%s", BuildVersion, CommitID)
 
 	//	Close the segment
 	seg.Close(nil)
 
 	//	Return our response
-	return events.APIGatewayProxyResponse{
-		Body:       imageData,
-		StatusCode: 200,
-		Headers: map[string]string{
-			"x-service-version": serviceVersion,
-			"Content-type":      "image/jpeg",
-		},
-		IsBase64Encoded: true,
-	}, nil
+	return response, nil
 }
 
 func main() {
