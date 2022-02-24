@@ -56,7 +56,7 @@ func GetMapImageForCoordinates(lat, long float64, zoom int) (MapImageResponse, e
 	jpeg.Encode(buffer, img, nil)
 
 	//	Encode the jpeg to base64
-	retval.Image = fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(buffer.Bytes()))
+	retval.Image = fmt.Sprintf("data:image/jpeg;base64,%s", base64.StdEncoding.EncodeToString(buffer.Bytes()))
 
 	//	Return what we have
 	return retval, nil
